@@ -1,0 +1,67 @@
+{% if kafka_messages %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">النوع</th>
+                <th scope="col">المصدر</th>
+                <th scope="col">الموضوع</th>
+                <th scope="col">المحتوى</th>
+                <th scope="col">وقت الاستلام</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for message in kafka_messages %}
+                <tr>
+                    <th scope="row">{{ forloop.counter }}</th>
+                    <td>
+                        {% if message.message_type == 'text' %}
+                            <span class="badge bg-primary">رسالة نصية</span>
+                        {% else %}
+                            <span class="badge bg-success">ملف</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if message.source == 'producer' %}
+                            <span class="badge bg-info">السيرفر الأول</span>
+                        {% else %}
+                            <span class="badge bg-warning">السيرفر الجديد</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if message.topic %}
+                            <small class="text-muted">{{ message.topic }}</small>
+                        {% else %}
+                            <small class="text-muted">-</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if message.message_type == 'text' %}
+                            {{ message.message }}
+                        {% else %}
+                            <div class="d-flex flex-column">
+                                {% if message.message %}
+                                    <small class="text-muted mb-1">الوصف: {{ message.message }}</small>
+                                {% endif %}
+                                <div>
+                                    <i class="bi bi-file-earmark"></i>
+                                    <a href="{{ message.file.url }}" target="_blank" class="text-decoration-none">
+                                        {{ message.file_name }}
+                                    </a>
+                                    {% if message.file_size %}
+                                        <small class="text-muted">({{ message.get_file_size_display }})</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td>{{ message.timestamp|date:"Y-m-d H:i:s" }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <div class="alert alert-info">
+        لا توجد رسائل مستلمة حتى الآن.
+    </div>
+{% endif %}

@@ -1,0 +1,125 @@
+{% extends 'kafka_app/base.html' %}
+
+{% block title %}الصفحة الرئيسية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- قسم إرسال الرسائل والملفات -->
+    <div class="col-md-5">
+        <!-- نموذج إرسال الرسائل النصية -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-chat-text"></i> إرسال رسالة نصية إلى Kafka</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'send_message' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="{{ message_form.message.id_for_label }}" class="form-label">{{ message_form.message.label }}</label>
+                        {{ message_form.message }}
+                        {% if message_form.message.errors %}
+                            <div class="text-danger">
+                                {% for error in message_form.message.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> إرسال الرسالة</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- نموذج إرسال الملفات -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-arrow-up"></i> إرسال ملف إلى Kafka</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'send_file' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="{{ file_form.file.id_for_label }}" class="form-label">{{ file_form.file.label }}</label>
+                        {{ file_form.file }}
+                        {% if file_form.file.errors %}
+                            <div class="text-danger">
+                                {% for error in file_form.file.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ file_form.description.id_for_label }}" class="form-label">{{ file_form.description.label }}</label>
+                        {{ file_form.description }}
+                        {% if file_form.description.errors %}
+                            <div class="text-danger">
+                                {% for error in file_form.description.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-upload"></i> رفع الملف</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- التحكم بمستهلك Kafka -->
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-gear"></i> التحكم بمستهلك Kafka</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <a href="{% url 'start_consumer' %}" class="btn btn-success"><i class="bi bi-play-fill"></i> بدء المستهلك</a>
+                    <a href="{% url 'stop_consumer' %}" class="btn btn-danger"><i class="bi bi-stop-fill"></i> إيقاف المستهلك</a>
+                </div>
+                <div class="d-flex justify-content-center">
+                    <a href="{% url 'reset_consumer' %}" class="btn btn-warning w-100"><i class="bi bi-arrow-repeat"></i> إعادة تعيين المستهلك</a>
+                </div>
+                <div class="mt-2 text-center">
+                    <small class="text-muted">الموضوع: {{ settings.KAFKA_CONSUMER_TOPIC }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- قسم عرض الرسائل والملفات -->
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-inbox"></i> الرسائل والملفات المستلمة من Kafka</h5>
+                <button id="refresh-messages" class="btn btn-sm btn-light"><i class="bi bi-arrow-clockwise"></i> تحديث</button>
+            </div>
+            <div class="card-body message-container" id="messages-container">
+                {% include 'kafka_app/messages_list.html' %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // تحديث الرسائل كل 5 ثوانٍ
+        setInterval(refreshMessages, 5000);
+
+        // تحديث الرسائل عند النقر على زر التحديث
+        $('#refresh-messages').click(function() {
+            refreshMessages();
+        });
+
+        function refreshMessages() {
+            $.ajax({
+                url: '{% url "refresh_messages" %}',
+                type: 'GET',
+                success: function(data) {
+                    $('#messages-container').html(data);
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
