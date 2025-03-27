@@ -7,6 +7,7 @@ from confluent_kafka import Producer, Consumer, KafkaError, KafkaException
 from django.conf import settings
 import logging
 from datetime import datetime
+from .analytics import MessageAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +179,17 @@ def consume_messages():
                         messages_buffer = messages_buffer[-100:]
 
                     logger.info(f"Received message: {message_data}")
+
+                    # Process message for analytics
+                    try:
+                        logger.info("Processing message for analytics...")
+                        success = MessageAnalyzer.update_message_analytics(message_data)
+                        if success:
+                            logger.info("Successfully updated analytics for message")
+                        else:
+                            logger.warning("Failed to update analytics for message")
+                    except Exception as e:
+                        logger.error(f"Error processing message for analytics: {e}")
                 except Exception as e:
                     logger.error(f"Error processing message: {e}")
     except KafkaException as e:

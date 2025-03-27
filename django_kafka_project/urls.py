@@ -25,6 +25,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", views.index, name="index"),
     path("api/messages/", views.get_messages, name="get_messages"),
+    path("analytics/", views.analytics_dashboard, name="analytics_dashboard"),
+    path("api/analytics/", views.analytics_api, name="analytics_api"),
 ]
 
 # إضافة مسارات الوسائط في وضع التطوير

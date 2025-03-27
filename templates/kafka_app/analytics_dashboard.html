@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحليلات الدردشة</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .dashboard-header {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .filter-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .chart-container {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .data-table {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stat-card {
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .nav-tabs {
+            margin-bottom: 20px;
+        }
+        .chart-title {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        .keyword-tag {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 5px;
+            background-color: #e9ecef;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        .keyword-tag .count {
+            font-weight: bold;
+            color: #0d6efd;
+            margin-right: 5px;
+        }
+        .user-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .user-item:last-child {
+            border-bottom: none;
+        }
+        .user-name {
+            font-weight: bold;
+        }
+        .user-stats {
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-2">تحليلات الدردشة</h1>
+                    <p class="text-muted">تحليلات مفصلة لرسائل الدردشة المستلمة عبر Kafka</p>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <a href="{% url 'index' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-right"></i> العودة إلى الصفحة الرئيسية
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="period" class="form-label">الفترة الزمنية</label>
+                    <select name="period" id="period" class="form-select">
+                        {% for period_value, period_name in periods %}
+                            <option value="{{ period_value }}" {% if period == period_value %}selected{% endif %}>{{ period_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="message_type" class="form-label">نوع الرسالة</label>
+                    <select name="message_type" id="message_type" class="form-select">
+                        {% for type_value, type_name in message_types %}
+                            <option value="{{ type_value }}" {% if message_type == type_value %}selected{% endif %}>{{ type_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="days" class="form-label">عدد الأيام</label>
+                    <select name="days" id="days" class="form-select">
+                        <option value="1" {% if days == 1 %}selected{% endif %}>يوم واحد</option>
+                        <option value="7" {% if days == 7 %}selected{% endif %}>7 أيام</option>
+                        <option value="30" {% if days == 30 %}selected{% endif %}>30 يوم</option>
+                        <option value="90" {% if days == 90 %}selected{% endif %}>90 يوم</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">تطبيق الفلتر</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <h3>إجمالي الرسائل</h3>
+                    <div class="value">{{ message_analytics|length }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <h3>المستخدمين النشطين</h3>
+                    <div class="value">{{ most_active_senders|length }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <h3>الكلمات المفتاحية</h3>
+                    <div class="value">{{ top_keywords|length }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <h3>أنواع الرسائل</h3>
+                    <div class="value">{{ message_counts_by_type|length }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="row">
+            <!-- Message Count Chart -->
+            <div class="col-md-8">
+                <div class="chart-container">
+                    <div class="chart-title">تحليل الرسائل عبر الزمن</div>
+                    <canvas id="messageCountChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Message Types Chart -->
+            <div class="col-md-4">
+                <div class="chart-container">
+                    <div class="chart-title">توزيع أنواع الرسائل</div>
+                    <canvas id="messageTypesChart"></canvas>
+                </div>
+            </div>
+
+            <!-- User Activity Chart -->
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <div class="chart-title">نشاط المستخدمين</div>
+                    <canvas id="userActivityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Keywords Chart -->
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <div class="chart-title">الكلمات المفتاحية الأكثر استخدامًا</div>
+                    <canvas id="keywordsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Message Lifetime Chart -->
+            <div class="col-md-12 mt-4">
+                <div class="chart-container">
+                    <div class="chart-title">مدة حياة الرسائل قبل الحذف</div>
+                    <canvas id="messageLifetimeChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Tables Section -->
+        <div class="row">
+            <!-- Top Keywords -->
+            <div class="col-md-6">
+                <div class="data-table">
+                    <h3 class="mb-3">الكلمات المفتاحية الأكثر استخدامًا</h3>
+                    <div class="keyword-cloud">
+                        {% for keyword in top_keywords %}
+                            <span class="keyword-tag">
+                                <span class="count">{{ keyword.occurrences }}</span>
+                                {{ keyword.keyword }}
+                            </span>
+                        {% empty %}
+                            <p class="text-muted">لا توجد كلمات مفتاحية متاحة</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Most Active Users -->
+            <div class="col-md-6">
+                <div class="data-table">
+                    <h3 class="mb-3">المستخدمين الأكثر نشاطًا</h3>
+                    <div class="user-list">
+                        {% for user in most_active_senders %}
+                            <div class="user-item">
+                                <span class="user-name">{{ user.username }}</span>
+                                <span class="user-stats">
+                                    <span class="sent">{{ user.messages_sent }} مرسلة</span> |
+                                    <span class="received">{{ user.messages_received }} مستلمة</span>
+                                </span>
+                            </div>
+                        {% empty %}
+                            <p class="text-muted">لا يوجد مستخدمين نشطين</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message Types Distribution -->
+            <div class="col-md-6 mt-4">
+                <div class="data-table">
+                    <h3 class="mb-3">توزيع أنواع الرسائل</h3>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>نوع الرسالة</th>
+                                    <th>عدد الرسائل</th>
+                                    <th>النسبة المئوية</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for type in message_counts_by_type %}
+                                <tr>
+                                    <td>
+                                        {% if type.message_type == 'soft_delete' %}
+                                            <span class="badge bg-warning">حذف ناعم</span>
+                                        {% elif type.message_type == 'text' %}
+                                            <span class="badge bg-info">نص</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ type.message_type }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ type.total_count }}</td>
+                                    <td>
+                                        {% with total_sum=message_counts_by_type|dictsortreversed:"total_count"|first %}
+                                            {% if total_sum.total_count > 0 %}
+                                                {{ type.total_count|floatformat:1 }}%
+                                            {% else %}
+                                                0%
+                                            {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">لا توجد بيانات متاحة</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message Lifetime Distribution -->
+            <div class="col-md-6 mt-4">
+                <div class="data-table">
+                    <h3 class="mb-3">مدة حياة الرسائل قبل الحذف</h3>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>مدة الحياة</th>
+                                    <th>عدد الرسائل</th>
+                                    <th>النسبة المئوية</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for lifetime in message_lifetime_analytics %}
+                                <tr>
+                                    <td>{{ lifetime.get_lifetime_range_display }}</td>
+                                    <td>{{ lifetime.message_count }}</td>
+                                    <td>
+                                        {% with total_sum=message_lifetime_analytics|dictsortreversed:"message_count"|first %}
+                                            {% if total_sum.message_count > 0 %}
+                                                {{ lifetime.message_count|floatformat:1 }}%
+                                            {% else %}
+                                                0%
+                                            {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">لا توجد بيانات متاحة</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Message Count Chart
+            const messageCountCtx = document.getElementById('messageCountChart').getContext('2d');
+            const messageCountChart = new Chart(messageCountCtx, {
+                type: 'line',
+                data: {
+                    labels: {{ chart_data.labels|safe }},
+                    datasets: [{
+                        label: 'عدد الرسائل',
+                        data: {{ chart_data.message_counts|safe }},
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Message Types Chart
+            const messageTypesCtx = document.getElementById('messageTypesChart').getContext('2d');
+            const messageTypesLabels = [];
+            const messageTypesData = [];
+
+            {% for type in message_counts_by_type %}
+                messageTypesLabels.push('{{ type.message_type }}');
+                messageTypesData.push({{ type.total_count }});
+            {% endfor %}
+
+            const messageTypesChart = new Chart(messageTypesCtx, {
+                type: 'pie',
+                data: {
+                    labels: messageTypesLabels,
+                    datasets: [{
+                        data: messageTypesData,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(255, 206, 86, 0.2)',
+                            'rgba(75, 192, 192, 0.2)',
+                            'rgba(153, 102, 255, 0.2)',
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        }
+                    }
+                }
+            });
+
+            // User Activity Chart
+            const userActivityCtx = document.getElementById('userActivityChart').getContext('2d');
+            const userLabels = [];
+            const userSentData = [];
+            const userReceivedData = [];
+
+            {% for user in most_active_senders %}
+                userLabels.push('{{ user.username }}');
+                userSentData.push({{ user.messages_sent }});
+                userReceivedData.push({{ user.messages_received }});
+            {% endfor %}
+
+            const userActivityChart = new Chart(userActivityCtx, {
+                type: 'bar',
+                data: {
+                    labels: userLabels,
+                    datasets: [{
+                        label: 'رسائل مرسلة',
+                        data: userSentData,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'رسائل مستلمة',
+                        data: userReceivedData,
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Keywords Chart
+            const keywordsCtx = document.getElementById('keywordsChart').getContext('2d');
+            const keywordsChart = new Chart(keywordsCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ chart_data.keyword_labels|safe }},
+                    datasets: [{
+                        label: 'عدد المرات',
+                        data: {{ chart_data.keyword_counts|safe }},
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(255, 206, 86, 0.2)',
+                            'rgba(75, 192, 192, 0.2)',
+                            'rgba(153, 102, 255, 0.2)',
+                            'rgba(255, 159, 64, 0.2)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    scales: {
+                        x: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Message Lifetime Chart
+            const lifetimeCtx = document.getElementById('messageLifetimeChart').getContext('2d');
+            const lifetimeChart = new Chart(lifetimeCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ chart_data.lifetime_labels|safe }},
+                    datasets: [{
+                        label: 'عدد الرسائل',
+                        data: {{ chart_data.lifetime_counts|safe }},
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
