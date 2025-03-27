@@ -20,15 +20,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from kafka_app import views
 
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", views.index, name="index"),
-    path("send/", views.send_message, name="send_message"),
-    path("send-file/", views.send_file, name="send_file"),
-    path("refresh/", views.refresh_messages, name="refresh_messages"),
-    path("start-consumer/", views.start_consumer, name="start_consumer"),
-    path("stop-consumer/", views.stop_consumer, name="stop_consumer"),
-    path("reset-consumer/", views.reset_consumer, name="reset_consumer"),
+    path("api/messages/", views.get_messages, name="get_messages"),
 ]
 
 # إضافة مسارات الوسائط في وضع التطوير

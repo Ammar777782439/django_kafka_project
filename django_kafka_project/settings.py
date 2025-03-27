@@ -129,4 +129,16 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-KAFKA_CONSUMER_TOPIC = 'new_messages_topic'  # موضوع الاستقبال من السيرفر الجديد
+# Kafka Configuration
+KAFKA_BOOTSTRAP_SERVERS = '192.168.117.128:9094'
+KAFKA_CONSUMER_TOPIC = 'chat_messages'  # موضوع الاستقبال من السيرفر
+KAFKA_PRODUCER_TOPIC = 'chat_messages'  # موضوع الإرسال إلى السيرفر
+
+# Kafka Client Configuration
+KAFKA_CONFIG = {
+    'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS,
+    'client.id': 'django-kafka-client',
+    'default.topic.config': {
+        'acks': 'all'
+    }
+}
