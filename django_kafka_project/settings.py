@@ -128,27 +128,5 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Kafka Configuration for Producer (Sending)
-KAFKA_PRODUCER_CONFIG = {
-    'bootstrap.servers': '192.168.117.128:9094',  # عنوان IP الخاص بخادم Kafka الأول
-    'client.id': 'django-kafka-producer',
-    'default.topic.config': {
-        'acks': 'all'
-    }
-}
 
-# Kafka Configuration for Consumer (Receiving)
-KAFKA_CONSUMER_CONFIG = {
-    'bootstrap.servers': '172.168.110.205:9094',  # عنوان IP الخاص بخادم Kafka الجديد
-    'client.id': 'django-kafka-consumer',
-    'group.id': 'django_consumer_group',
-    'auto.offset.reset': 'earliest',  # استلام جميع الرسائل من البداية
-    'enable.auto.commit': True,
-    'auto.commit.interval.ms': 1000,
-    'session.timeout.ms': 30000
-}
-
-# Kafka Topic Configuration
-KAFKA_PRODUCER_TOPIC = 'django_messages'  # موضوع الإرسال للسيرفر الأول
 KAFKA_CONSUMER_TOPIC = 'new_messages_topic'  # موضوع الاستقبال من السيرفر الجديد
-KAFKA_CONSUMER_GROUP = 'django_consumer_group'
